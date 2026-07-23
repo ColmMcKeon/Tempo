@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Build artifacts
+*.app/
+Tempo-darwin-*/
+dist/
+out/
+Broken/
+
+# Build outputs
+*.icns
+*.png
+*.dmg
+
+# Environment
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# System
+.DS_Store
+Thumbs.db

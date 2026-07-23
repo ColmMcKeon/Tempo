@@ -1,0 +1,66 @@
+<svg width="1000" height="640" viewBox="0 0 1000 640" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .word { font-family: 'Poppins', 'Manrope', 'Segoe UI', sans-serif; font-weight: 600; letter-spacing: -1.5px; }
+      .word-o { font-family: 'Poppins', 'Manrope', 'Segoe UI', sans-serif; font-weight: 600; font-style: italic; }
+      .label { font-family: 'Manrope', 'Segoe UI', sans-serif; font-size: 13px; fill: #9AA0AC; letter-spacing: 0.5px; }
+    </style>
+  </defs>
+
+  <!-- ===================== PANEL 1: Primary lockup, light ===================== -->
+  <rect x="0" y="0" width="500" height="320" fill="#FFFFFF"/>
+
+  <!-- icon mark -->
+  <g transform="translate(70,90) scale(1.05)">
+    <rect x="0" y="10" width="46" height="14" rx="7" fill="#1E56A0"/>
+    <rect x="16" y="34" width="62" height="14" rx="7" fill="#F5A623"/>
+    <rect x="0" y="58" width="76" height="14" rx="7" fill="#1E56A0"/>
+    <!-- today / tempo marker slash -->
+    <line x1="58" y1="-6" x2="72" y2="86" stroke="#E63946" stroke-width="7" stroke-linecap="round"/>
+    <circle cx="58" cy="-6" r="6.5" fill="#E63946"/>
+  </g>
+
+  <!-- wordmark -->
+  <text x="70" y="230" class="word" font-size="58" fill="#1B2340">temp<tspan class="word-o" fill="#E63946">o</tspan></text>
+
+  <text x="70" y="290" class="label">PRIMARY LOCKUP — LIGHT</text>
+
+  <!-- ===================== PANEL 2: Icon mark alone ===================== -->
+  <rect x="500" y="0" width="500" height="320" fill="#FFFFFF"/>
+  <g transform="translate(700,110) scale(1.9)">
+    <rect x="0" y="10" width="46" height="14" rx="7" fill="#1E56A0"/>
+    <rect x="16" y="34" width="62" height="14" rx="7" fill="#F5A623"/>
+    <rect x="0" y="58" width="76" height="14" rx="7" fill="#1E56A0"/>
+    <line x1="58" y1="-6" x2="72" y2="86" stroke="#E63946" stroke-width="7" stroke-linecap="round"/>
+    <circle cx="58" cy="-6" r="6.5" fill="#E63946"/>
+  </g>
+  <text x="700" y="290" class="label">ICON MARK</text>
+
+  <!-- ===================== PANEL 3: Reversed lockup, dark ===================== -->
+  <rect x="0" y="320" width="500" height="320" fill="#161B2E"/>
+  <g transform="translate(70,410) scale(1.05)">
+    <rect x="0" y="10" width="46" height="14" rx="7" fill="#4A90D9"/>
+    <rect x="16" y="34" width="62" height="14" rx="7" fill="#F5C158"/>
+    <rect x="0" y="58" width="76" height="14" rx="7" fill="#4A90D9"/>
+    <line x1="58" y1="-6" x2="72" y2="86" stroke="#FF6B6B" stroke-width="7" stroke-linecap="round"/>
+    <circle cx="58" cy="-6" r="6.5" fill="#FF6B6B"/>
+  </g>
+  <text x="70" y="550" class="word" font-size="58" fill="#F4F5F7">temp<tspan class="word-o" fill="#FF6B6B">o</tspan></text>
+  <text x="70" y="610" class="label" fill="#6B7280">REVERSED LOCKUP — DARK</text>
+
+  <!-- ===================== PANEL 4: Monochrome, for print/stamping ===================== -->
+  <rect x="500" y="320" width="500" height="320" fill="#FFFFFF"/>
+  <g transform="translate(560,410) scale(1.05)">
+    <rect x="0" y="10" width="46" height="14" rx="7" fill="#111111"/>
+    <rect x="16" y="34" width="62" height="14" rx="7" fill="#111111"/>
+    <rect x="0" y="58" width="76" height="14" rx="7" fill="#111111"/>
+    <line x1="58" y1="-6" x2="72" y2="86" stroke="#111111" stroke-width="7" stroke-linecap="round"/>
+    <circle cx="58" cy="-6" r="6.5" fill="#111111"/>
+  </g>
+  <text x="560" y="550" class="word" font-size="58" fill="#111111">tempo</text>
+  <text x="560" y="610" class="label">MONOCHROME — PRINT/STAMP</text>
+
+  <!-- divider lines -->
+  <line x1="500" y1="0" x2="500" y2="640" stroke="#E5E7EB" stroke-width="1"/>
+  <line x1="0" y1="320" x2="1000" y2="320" stroke="#E5E7EB" stroke-width="1"/>
+</svg>

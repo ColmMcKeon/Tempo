@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Tempo</title>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     APP CHROME STYLE  (dark shell — NOT included in HTML export)
+     ══════════════════════════════════════════════════════════════════ -->
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #131a24; color: #e8eef5; overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+
+  /* ── TITLE BAR ── */
+  #titlebar {
+    height: 46px; -webkit-app-region: drag;
+    display: flex; align-items: center; padding: 0 14px 0 84px;
+    background: #0f151e; border-bottom: 1px solid #1f2a38; gap: 10px; flex-shrink: 0;
+  }
+  #titlebar #tb-logo { width: 22px; height: 22px; border-radius: 5px; }
+  #titlebar #proj-title { font-size: 16px; font-weight: 800; color: #ffffff; letter-spacing: .2px; }
+  #titlebar .tb-spacer { flex: 1; }
+  #titlebar button {
+    -webkit-app-region: no-drag;
+    background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12);
+    color: #b7c8da; font-size: 12px; padding: 6px 12px; border-radius: 6px; cursor: pointer;
+    transition: background .15s, color .15s;
+  }
+  #titlebar button:hover { background: rgba(255,255,255,0.14); color: #fff; }
+  #titlebar button.primary { background: #4a8cd4; border-color: #4a8cd4; color: #fff; }
+  #titlebar button.primary:hover { background: #5a9ce4; }
+  #titlebar .dirty-dot { color: #f6c453; font-size: 15px; display: none; margin-left: -4px; }
+  #titlebar.dirty .dirty-dot { display: inline; }
+
+  /* ── TABS ── */
+  #tabbar { display: flex; gap: 5px; padding: 6px 26px; background: #16202c; border-bottom: 1px solid #24303f; flex-shrink: 0; align-items: center; }
+  #tabbar.hidden { display: none; }
+  #tabbar .tab-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: #55677d; margin-right: 4px; }
+  .tab-btn {
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); color: #9fb4c9;
+    font-size: 12px; font-weight: 600; padding: 4px 15px; cursor: pointer; border-radius: 6px; letter-spacing: .3px;
+    transition: background .15s, color .15s, border-color .15s;
+  }
+  .tab-btn:hover { background: rgba(255,255,255,0.1); color: #dbe7f2; }
+  .tab-btn.active { background: #4a8cd4; color: #fff; border-color: #4a8cd4; box-shadow: 0 2px 6px rgba(74,140,212,.3); }
+
+  #main { flex: 1; min-height: 0; overflow-y: auto; padding: 12px 26px 36px; }
+  #app-view.hidden { display: none; }
+  .tab-pane.tab-hidden { display: none; }
+  /* In-app the project name is already in the titlebar, so hide the redundant
+     chart title on the dark background; the export keeps it (no #tab-view scope). */
+  #tab-view .tempo-title { display: none; }
+  #tab-view .tempo-sub { color: #8aa0b8; margin: 12px 0 0; }
+
+  /* ── LAUNCH SCREEN ── */
+  #launch-screen {
+    position: fixed; inset: 0;
+    background: linear-gradient(160deg, #1e2a3a 0%, #2c3e55 60%, #1a2535 100%);
+    z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  #launch-screen.hidden { display: none; }
+  #launch-logo { width: 76px; height: 76px; border-radius: 18px; margin-bottom: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.4); }
+  #launch-screen h1 { font-size: 30px; font-weight: 800; color: #e8eef5; letter-spacing: 6px; margin-bottom: 2px; }
+  #launch-screen p.subtitle { font-size: 12px; color: #7a99bb; margin-bottom: 28px; letter-spacing: 1px; }
+  #launch-card {
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 12px; padding: 26px 30px; width: 440px; display: flex; flex-direction: column; gap: 10px;
+  }
+  #launch-card h2 { font-size: 12px; color: #9bb5cc; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 2px; }
+  #launch-project-list { max-height: 320px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+  .project-item {
+    display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 8px;
+    background: rgba(255,255,255,0.05); border: 2px solid transparent; cursor: pointer;
+    transition: background .15s, border-color .15s; color: #d0dce8; font-size: 13px;
+  }
+  .project-item:hover { background: rgba(255,255,255,0.1); }
+  .project-item .project-icon { font-size: 14px; opacity: .5; }
+  .project-item .p-label { flex: 1; text-transform: capitalize; }
+  .project-item .row-btn {
+    padding: 4px 12px; font-size: 11px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.06); color: #8aacc8; cursor: pointer; white-space: nowrap; flex-shrink: 0;
+  }
+  .project-item .open-btn { background: rgba(80,140,220,0.25); color: #7ab0ee; border-color: rgba(80,140,220,0.35); }
+  .project-item .open-btn:hover { background: rgba(80,140,220,0.45); color: #aad0ff; }
+  .project-item .archive-btn:hover { background: rgba(255,80,80,0.2); color: #ff8888; border-color: rgba(255,80,80,0.3); }
+  .project-item.archived-item { opacity: .5; }
+  .launch-section-label { font-size: 10px; color: #4a6a8a; text-transform: uppercase; letter-spacing: 1px; padding: 6px 2px 2px; }
+  #launch-new-row { display: flex; gap: 8px; margin-top: 4px; }
+  #launch-new-input {
+    flex: 1; padding: 9px 12px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 7px; color: #e8eef5; font-size: 13px; outline: none;
+  }
+  #launch-new-input::placeholder { color: #4a6a8a; }
+  #launch-new-input:focus { border-color: #4a8cd4; }
+  #launch-create-btn {
+    padding: 9px 16px; background: rgba(80,180,100,0.25); color: #88dd99; border: 1px solid rgba(80,180,100,0.35);
+    border-radius: 7px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
+  }
+  #launch-create-btn:hover { background: rgba(80,180,100,0.4); }
+  #launch-divider { border: none; border-top: 1px solid rgba(255,255,255,0.08); margin: 4px 0; }
+  #launch-empty { text-align: center; color: #5a7a9a; font-size: 12px; padding: 20px 0; }
+  #launch-actions { display: flex; gap: 10px; margin-top: 4px; }
+  #launch-browse-btn {
+    flex: 1; padding: 10px; background: rgba(255,255,255,0.08); color: #9bb5cc;
+    border: 1px solid rgba(255,255,255,0.15); border-radius: 7px; font-size: 13px; font-weight: 600; cursor: pointer;
+  }
+  #launch-browse-btn:hover { background: rgba(255,255,255,0.14); color: #d0dce8; }
+</style>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     SHARED CHART STYLE  (id=tempo-style — copied verbatim into export)
+     ══════════════════════════════════════════════════════════════════ -->
+<style id="tempo-style">
+  .tempo-wrap { max-width: 1240px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #333; }
+  .tempo-title { text-align: center; font-size: 22px; font-weight: 800; color: #1a1a2e; padding: 2px 0 2px; }
+  .tempo-sub { text-align: center; font-size: 12px; color: #667; margin: 14px 0 2px; }
+  .tempo-exported { text-align: center; font-size: 11px; color: #98a2b3; margin: 0 0 12px; }
+  .tempo-card { background: #fff; border: 1px solid #e3e8f0; border-radius: 10px; padding: 14px 14px 6px; box-shadow: 0 1px 3px rgba(20,40,80,.05); }
+  .tempo-gantt { width: 100%; overflow-x: auto; }
+  .tempo-capwrap { margin-top: 6px; }
+  .tempo-caphead { font-size: 11px; color: #667; font-weight: 600; padding: 8px 4px 2px; text-transform: uppercase; letter-spacing: .5px; }
+  .tempo-legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 11px; color: #667; padding: 6px 4px 10px; }
+  .tempo-legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .tempo-legend i { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
+
+  .tempo-panel { background: #fff; border: 1px solid #e3e8f0; border-radius: 10px; padding: 18px; margin-bottom: 18px; }
+  .tempo-panel h2 { font-size: 14px; margin-bottom: 12px; color: #444; display: flex; align-items: center; gap: 12px; }
+  .tempo-cfg { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; font-size: 12px; color: #555; }
+  .tempo-cfg label { display: inline-flex; align-items: center; gap: 6px; }
+  .tempo-cfg input { width: 56px; border: 1px solid #d0d5e8; border-radius: 5px; padding: 4px 6px; font-size: 12px; }
+  .tempo-cfg .scope-badge { margin-left: auto; background: #eef2fb; color: #3355aa; border-radius: 20px; padding: 5px 14px; font-weight: 600; font-size: 12px; }
+
+  table.tempo-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  table.tempo-table th { background: #f0f2f8; padding: 8px 8px; text-align: left; font-weight: 600; color: #556; position: sticky; top: 0; }
+  table.tempo-table td { padding: 5px 6px; border-bottom: 1px solid #eef0f5; vertical-align: middle; }
+  table.tempo-table tr.is-section td { background: #f7f9fd; }
+  table.tempo-table tr.q-divider td { background: #eef0fe; color: #4f46e5; font-weight: 700; font-size: 11px; letter-spacing: .5px; padding: 7px 8px; border-top: 2px solid #6366f1; border-bottom: none; }
+  table.tempo-table input[type=text], table.tempo-table input[type=date], table.tempo-table input[type=number] { width: 100%; border: 1px solid #d0d5e8; border-radius: 5px; padding: 4px 6px; font-size: 12px; }
+  table.tempo-table input[type=number] { width: 60px; }
+  table.tempo-table select { width: 100%; border: 1px solid #d0d5e8; border-radius: 5px; padding: 4px 6px; font-size: 12px; background: #fff; }
+  table.tempo-table .start-cell { display: flex; align-items: center; gap: 6px; }
+  table.tempo-table .start-cell input[type=date] { flex: 1; }
+  table.tempo-table select.sprint-pick { width: auto; min-width: 58px; flex: 0 0 auto; color: #3355aa; font-weight: 600; }
+  table.tempo-table input[type=color] { width: 34px; height: 26px; border: none; cursor: pointer; background: none; padding: 0; }
+  .tempo-btn { background: #2563eb; color: #fff; border: none; border-radius: 6px; padding: 8px 16px; font-size: 12.5px; cursor: pointer; }
+  .tempo-btn:hover { background: #1d4ed8; }
+  .tempo-btn.add { background: #16a34a; } .tempo-btn.add:hover { background: #15803d; }
+  .tempo-btn.ghost { background: #eef1f6; color: #556; } .tempo-btn.ghost:hover { background: #e2e7f0; }
+  .tempo-btn.mile { background: #7c3aed; } .tempo-btn.mile:hover { background: #6d28d9; }
+  .tempo-btn.sched { background: #0ea5e9; } .tempo-btn.sched:hover { background: #0284c7; }
+  .tempo-btn.del { background: #dc2626; padding: 4px 9px; } .tempo-btn.del:hover { background: #b91c1c; }
+  .tempo-btn.mv { background: #64748b; padding: 4px 7px; margin-right: 2px; } .tempo-btn.mv:hover { background: #475569; } .tempo-btn.mv:disabled { background: #cbd5e1; cursor: default; }
+  .tempo-actions { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════ APP CHROME ═══════════ -->
+<div id="titlebar">
+  <img id="tb-logo" src="logo.png" alt="">
+  <span id="proj-title">Tempo</span>
+  <span class="dirty-dot">●</span>
+  <span class="tb-spacer"></span>
+  <button id="btn-export">Export for Wiki</button>
+  <button id="btn-save" class="primary">Save</button>
+  <button id="btn-home">Home</button>
+</div>
+
+<div id="tabbar" class="hidden">
+  <span class="tab-label">Mode</span>
+  <button class="tab-btn active" data-tab="view">View</button>
+  <button class="tab-btn" data-tab="edit">Edit</button>
+</div>
+
+<div id="main">
+  <div id="app-view" class="hidden"></div>
+</div>
+
+<!-- ═══════════ LAUNCH SCREEN ═══════════ -->
+<div id="launch-screen">
+  <img id="launch-logo" src="logo.png" alt="Tempo">
+  <h1>TEMPO</h1>
+  <p class="subtitle">Sprint Scheduler</p>
+  <div id="launch-card">
+    <h2>Open a Schedule</h2>
+    <div id="launch-project-list"><div id="launch-empty">No schedules yet — create one below.</div></div>
+    <hr id="launch-divider">
+    <div id="launch-new-row">
+      <input type="text" id="launch-new-input" placeholder="New schedule name…">
+      <button id="launch-create-btn">+ Create</button>
+    </div>
+    <div id="launch-actions">
+      <button id="launch-browse-btn">Browse…</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     TEMPO CHART ENGINE  (id=tempo-engine — copied verbatim into export)
+     Pure vanilla JS + canvas. No Electron / app APIs. Operates on
+     window.TEMPO_STATE = { name, subtitle, cap:{ptsPerDev,devs}, sprints:[], tasks:[], interactive }
+     ══════════════════════════════════════════════════════════════════ -->
+<script id="tempo-engine">
+var TEMPO = (function () {
+  var LABEL_W = 300, ROW_H = 28, PAD_TOP = 56, PAD_BOT = 16, CAP_H = 46;
+  var MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+  var STOCK_SPRINTS = [
+    {num:259,start:"2025-08-26",weeks:2,quarter:"Q4 FY25"},{num:260,start:"2025-09-09",weeks:2},{num:261,start:"2025-09-23",weeks:2},
+    {num:262,start:"2025-10-07",weeks:2},{num:263,start:"2025-10-21",weeks:2},{num:264,start:"2025-11-04",weeks:2},
+    {num:265,start:"2025-11-18",weeks:3,quarter:"Q1 FY26"},{num:266,start:"2025-12-09",weeks:4},{num:267,start:"2026-01-06",weeks:2},
+    {num:268,start:"2026-01-20",weeks:2},{num:269,start:"2026-02-03",weeks:2},{num:270,start:"2026-02-17",weeks:2},
+    {num:271,start:"2026-03-03",weeks:2,quarter:"Q2 FY26"},{num:272,start:"2026-03-17",weeks:2},{num:273,start:"2026-03-31",weeks:2},
+    {num:274,start:"2026-04-14",weeks:2},{num:275,start:"2026-04-28",weeks:2},{num:276,start:"2026-05-12",weeks:2},
+    {num:277,start:"2026-05-26",weeks:2,quarter:"Q3 FY26"},{num:278,start:"2026-06-09",weeks:2},{num:279,start:"2026-06-23",weeks:3},
+    {num:280,start:"2026-07-14",weeks:2},{num:281,start:"2026-07-28",weeks:2},{num:282,start:"2026-08-11",weeks:2},
+    {num:283,start:"2026-08-25",weeks:2,quarter:"Q4 FY26"},{num:284,start:"2026-09-08",weeks:2},{num:285,start:"2026-09-22",weeks:2},
+    {num:286,start:"2026-10-06",weeks:2},{num:287,start:"2026-10-20",weeks:3},{num:288,start:"2026-11-10",weeks:3}
+  ];
+
+  function pd(s){ var p=String(s).split("-"); return new Date(+p[0],+p[1]-1,+p[2]); }
+  function iso(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+  function addDays(d,n){ var x=new Date(d); x.setDate(x.getDate()+n); return x; }
+  function sprintEnd(sp){ return addDays(pd(sp.start), (sp.weeks||2)*7 - 1); }
+  // Build entities from char codes so the source carries NO literal HTML entities —
+  // this keeps the script valid even after a Confluence HTML macro decodes entities.
+  function attr(s){ var A=String.fromCharCode(38); return String(s).replace(/&/g,A+"amp;").replace(/'/g,A+"#39;").replace(/"/g,A+"quot;"); }
+  function isBuffer(t){ return !t.milestone && (t.label.indexOf("⏸") >= 0 || /Moratorium|Dilatio/i.test(t.label)); }
+  function fmt(n){ return (Math.round(n*10)/10).toString(); }
+
+  var S = { name:"", subtitle:"", cap:{ptsPerDev:7,devs:1}, sprints:[], tasks:[], interactive:true };
+
+  // ── Working-day helpers (developers don't work weekends) ──
+  function isWeekend(d){ var g=d.getDay(); return g===0 || g===6; }         // Sun=0, Sat=6
+  function nextWorkday(d){ var x=new Date(d); while(isWeekend(x)) x.setDate(x.getDate()+1); return x; }
+  // Date of the n-th working day counting from `start` (inclusive of start when it's a weekday).
+  function addWorkdays(start, n){ var cur=nextWorkday(start), c=1; while(c<n){ cur.setDate(cur.getDate()+1); cur=nextWorkday(cur); c++; } return cur; }
+  // Working-day duration from points: points ÷ (pts/dev/sprint) × 10 working days per 2-week sprint.
+  function ptsToWorkDays(points){ var ppd=(+S.cap.ptsPerDev)||7; return Math.max(1, Math.round((+points||0)*10/ppd)); }
+  function shortDate(isoStr){ var d=pd(isoStr); return MON[d.getMonth()]+" "+d.getDate(); }
+  // <option> list of sprints for a task's Start picker; selects the sprint containing selISO.
+  function sprintOptions(selISO){
+    var sel=null, d0=selISO?pd(selISO):null;
+    if(d0) S.sprints.forEach(function(sp){ if(sel===null && d0>=pd(sp.start) && d0<=sprintEnd(sp)) sel=sp.start; });
+    var opts="", matched=false;
+    S.sprints.forEach(function(sp){ var isSel=(sp.start===sel); if(isSel)matched=true;
+      opts+="<option value='"+sp.start+"'"+(isSel?" selected":"")+">S"+sp.num+"</option>"; });
+    if(!matched && selISO) opts="<option value='"+selISO+"' selected>— set sprint —</option>"+opts;
+    return opts;
+  }
+  // Start of the sprint that contains today (falls back to first/last if today is outside the range).
+  function currentSprintStart(){
+    var today=new Date(); today.setHours(0,0,0,0);
+    if(!S.sprints.length) return today;
+    for(var i=0;i<S.sprints.length;i++){ var sp=S.sprints[i]; if(today>=pd(sp.start) && today<=sprintEnd(sp)) return pd(sp.start); }
+    var first=S.sprints[0], lastSp=S.sprints[S.sprints.length-1];
+    return today>sprintEnd(lastSp) ? pd(lastSp.start) : pd(first.start);
+  }
+
+  function range() {
+    var starts = [], ends = [];
+    S.sprints.forEach(function(sp){ starts.push(pd(sp.start)); ends.push(sprintEnd(sp)); });
+    S.tasks.forEach(function(t){ if(t.start) starts.push(pd(t.start)); if(t.end) ends.push(pd(t.end)); });
+    if (!starts.length) { var n=new Date(); return {start:n, end:addDays(n,60), total:61}; }
+    var mn = new Date(Math.min.apply(null, starts)), mx = new Date(Math.max.apply(null, ends));
+    return { start: mn, end: mx, total: Math.round((mx-mn)/86400000)+1 };
+  }
+
+  function totalScope(){ var s=0; S.tasks.forEach(function(t){ if(t.label.trim() && !t.section && !t.milestone && !isBuffer(t)) s+=(+t.points||0); }); return s; }
+
+  function capacityData(){
+    return S.sprints.map(function(sp){
+      var s0 = pd(sp.start), s1 = sprintEnd(sp), assigned = 0;
+      S.tasks.forEach(function(t){
+        if (!t.label.trim() || t.section || t.milestone || isBuffer(t) || !(+t.points)) return;
+        var t0 = pd(t.start), t1 = pd(t.end);
+        var days = Math.round((t1 - t0)/86400000) + 1; if (days < 1) days = 1;
+        var perDay = (+t.points) / days;
+        var lo = new Date(Math.max(t0, s0)), hi = new Date(Math.min(t1, s1));
+        var overlap = Math.round((hi - lo)/86400000) + 1;
+        if (overlap > 0) assigned += perDay * overlap;
+      });
+      var capacity = (+S.cap.ptsPerDev||0) * (+S.cap.devs||0) * ((sp.weeks||2)/2);
+      return { num: sp.num, start: sp.start, weeks: sp.weeks||2, assigned: assigned, capacity: capacity };
+    });
+  }
+
+  function roundRect(ctx,x,y,w,h,r){ ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y); }
+
+  function drawChart(){
+    var canvas = document.getElementById("tempo-chart"); if(!canvas) return;
+    var R = range(), START = R.start, TOTAL = R.total;
+    function xOf(d){ return LABEL_W + (Math.round((d-START)/86400000)/TOTAL) * BAR_W; }
+    var DPR = window.devicePixelRatio||1;
+    var host = document.getElementById("tempo-gantt");
+    var WIDTH = Math.max(980, host ? host.offsetWidth : 980);
+    var BAR_W = WIDTH - LABEL_W - 18;
+    // Don't render blank (unnamed) task rows on the chart.
+    var rows = S.tasks.filter(function(t){ return t.section||t.milestone||isBuffer(t)||(t.label&&t.label.trim()); });
+    var HEIGHT = PAD_TOP + rows.length*ROW_H + PAD_BOT;
+    canvas.width = WIDTH*DPR; canvas.height = HEIGHT*DPR; canvas.style.width = WIDTH+"px"; canvas.style.height = HEIGHT+"px";
+    var ctx = canvas.getContext("2d"); ctx.setTransform(DPR,0,0,DPR,0,0);
+    ctx.fillStyle = "#fff"; ctx.fillRect(0,0,WIDTH,HEIGHT);
+
+    S.sprints.forEach(function(sp){
+      var x = xOf(pd(sp.start));
+      ctx.strokeStyle = "#e5e7eb"; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(x,PAD_TOP-20); ctx.lineTo(x,HEIGHT); ctx.stroke();
+      ctx.fillStyle = "#556"; ctx.font = "bold 10px -apple-system,sans-serif"; ctx.fillText("S"+sp.num, x+3, PAD_TOP-26);
+      var d = pd(sp.start); ctx.fillStyle = "#aab"; ctx.font = "9px -apple-system,sans-serif"; ctx.fillText(MON[d.getMonth()]+" "+d.getDate(), x+3, PAD_TOP-14);
+    });
+
+    rows.forEach(function(t,i){
+      var y = PAD_TOP + i*ROW_H, cy = y + ROW_H/2, buf = isBuffer(t);
+      ctx.fillStyle = buf ? "#f1f5f9" : (i%2===0 ? "#fafbff" : "#fff"); ctx.fillRect(0,y,WIDTH,ROW_H);
+      ctx.font = t.section ? "bold 12px -apple-system,sans-serif" : "12px -apple-system,sans-serif";
+      ctx.fillStyle = buf ? "#64748b" : (t.section ? "#1a1a2e" : "#455");
+      var lbl = t.label + ((!t.section && !t.milestone && !buf && +t.points) ? "  ("+t.points+"p)" : "");
+      ctx.fillText(lbl, 8, cy+4);
+      var sx = xOf(pd(t.start)), ex = xOf(pd(t.end));
+      if (t.milestone) {
+        ctx.fillStyle = t.color; ctx.beginPath();
+        ctx.moveTo(ex,cy-8); ctx.lineTo(ex+8,cy); ctx.lineTo(ex,cy+8); ctx.lineTo(ex-8,cy); ctx.closePath(); ctx.fill();
+        ctx.font = "bold 11px sans-serif"; var mileLabel = t.label + " — " + shortDate(t.start); var w = ctx.measureText(mileLabel).width;
+        var lx = (ex+w+22>WIDTH) ? ex-w-14 : ex+14; ctx.fillText(mileLabel, lx, cy+4);
+      } else {
+        var bw = Math.max(ex-sx,4), bh = buf?8:(t.section?16:12), by = cy-bh/2;
+        ctx.beginPath();
+        if (buf) {
+          ctx.fillStyle = "#94a3b8"; roundRect(ctx,sx,by,bw,bh,3); ctx.fill();
+          ctx.strokeStyle="#64748b"; ctx.lineWidth=.5; ctx.setLineDash([3,3]); ctx.strokeRect(sx,by,bw,bh); ctx.setLineDash([]);
+        } else {
+          ctx.fillStyle = t.color; roundRect(ctx,sx,by,bw,bh,4); ctx.fill();
+          if (bw>44) {
+            ctx.fillStyle = "#fff"; ctx.font = "10px sans-serif";
+            var days = Math.round((pd(t.end)-pd(t.start))/86400000)+1;
+            ctx.fillText(days+"d", sx+5, cy+3);
+          }
+        }
+      }
+    });
+
+    // Quarter dividers (drawn on top, like the Today line)
+    S.sprints.forEach(function(sp){
+      if (!sp.quarter) return;
+      var qx = xOf(pd(sp.start));
+      ctx.strokeStyle = "#6366f1"; ctx.lineWidth = 1.5; ctx.setLineDash([2,3]);
+      ctx.beginPath(); ctx.moveTo(qx, 2); ctx.lineTo(qx, HEIGHT); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = "#4f46e5"; ctx.font = "bold 11px -apple-system,sans-serif"; ctx.fillText(sp.quarter, qx+4, 11);
+    });
+
+    var today = new Date(); today.setHours(0,0,0,0);
+    if (today>=START && today<=R.end) {
+      var tx = xOf(today);
+      ctx.strokeStyle="#dc2626"; ctx.lineWidth=2; ctx.setLineDash([5,4]);
+      ctx.beginPath(); ctx.moveTo(tx,0); ctx.lineTo(tx,HEIGHT); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle="#dc2626"; ctx.font="bold 10px sans-serif"; ctx.fillText("Today", tx+3, PAD_TOP-38);
+    }
+    ctx.strokeStyle="#d1d5db"; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(LABEL_W,0); ctx.lineTo(LABEL_W,HEIGHT); ctx.stroke();
+
+    drawCapacity(START, TOTAL, BAR_W, WIDTH);
+  }
+
+  function drawCapacity(START, TOTAL, BAR_W, WIDTH){
+    var canvas = document.getElementById("tempo-cap"); if(!canvas) return;
+    function xOf(d){ return LABEL_W + (Math.round((d-START)/86400000)/TOTAL) * BAR_W; }
+    var DPR = window.devicePixelRatio||1;
+    canvas.width = WIDTH*DPR; canvas.height = CAP_H*DPR; canvas.style.width = WIDTH+"px"; canvas.style.height = CAP_H+"px";
+    var ctx = canvas.getContext("2d"); ctx.setTransform(DPR,0,0,DPR,0,0);
+    ctx.clearRect(0,0,WIDTH,CAP_H);
+    ctx.fillStyle="#556"; ctx.font="10px -apple-system,sans-serif"; ctx.fillText("Capacity", 8, CAP_H/2+3);
+    capacityData().forEach(function(c){
+      var x0 = xOf(pd(c.start)), x1 = xOf(addDays(pd(c.start), c.weeks*7));
+      var w = Math.max(x1-x0-3, 6), x = x0+1.5, bh = 22, by = (CAP_H-bh)/2;
+      var ratio = c.capacity>0 ? c.assigned/c.capacity : 0;
+      ctx.fillStyle = "#eef1f6"; ctx.beginPath(); roundRect(ctx,x,by,w,bh,4); ctx.fill();
+      var fillCol = ratio>1.001 ? "#dc2626" : (ratio<0.5 ? "#cbd5e1" : "#22c55e");
+      var fw = Math.max(Math.min(ratio,1)*w, ratio>0?3:0);
+      if (fw>0){ ctx.fillStyle = fillCol; ctx.beginPath(); roundRect(ctx,x,by,fw,bh,4); ctx.fill(); }
+      ctx.strokeStyle = ratio>1.001 ? "#b91c1c" : "#d7dded"; ctx.lineWidth=1; ctx.beginPath(); roundRect(ctx,x,by,w,bh,4); ctx.stroke();
+      if (w>34){
+        ctx.fillStyle = ratio>0.5 ? "#fff" : "#556"; ctx.font="bold 10px sans-serif"; ctx.textAlign="center";
+        ctx.fillText(fmt(c.assigned)+"/"+fmt(c.capacity), x+w/2, by+bh/2+3.5); ctx.textAlign="left";
+      }
+    });
+  }
+
+  function buildTaskTable(){
+    var body = document.getElementById("tempo-task-body"); if(!body) return;
+    body.innerHTML = "";
+    S.tasks.forEach(function(t,i){
+      var tr = document.createElement("tr"); if(t.section) tr.className="is-section";
+      var isTask = !t.section && !t.milestone && !isBuffer(t);
+      // Start: milestones keep a precise date; tasks show BOTH an editable start date
+      // and a sprint dropdown (changing either updates the other).
+      var startCell = t.milestone
+        ? "<input type='date' value='"+t.start+"' oninput=\"TEMPO._set("+i+",'milestoneDate',this.value)\">"
+        : "<div class='start-cell'><select class='sprint-pick' title='Jump start to a sprint' onchange=\"TEMPO._set("+i+",'startSprint',this.value)\">"+sprintOptions(t.start)+"</select>"+
+          "<input type='date' value='"+t.start+"' onchange=\"TEMPO._set("+i+",'start',this.value)\"></div>";
+      // Concurrent toggle only meaningful for real tasks.
+      var concCell = isTask
+        ? "<input type='checkbox' title='Runs concurrently with the previous task' "+(t.concurrent?"checked":"")+" onchange=\"TEMPO._set("+i+",'concurrent',this.checked)\">"
+        : "";
+      // Milestones are a single dated point — no separate End, no points.
+      var endCell = t.milestone ? "<span style='color:#bbb'>—</span>"
+        : "<input type='date' value='"+t.end+"' oninput=\"TEMPO._set("+i+",'end',this.value)\">";
+      var ptsCell = t.milestone ? "<span style='color:#bbb'>—</span>"
+        : "<input type='number' min='0' step='1' value='"+(t.points||0)+"' onchange=\"TEMPO._set("+i+",'points',this.value)\">";
+      tr.innerHTML =
+        "<td><input type='text' placeholder='Task name…' value='"+attr(t.label)+"' oninput=\"TEMPO._set("+i+",'label',this.value)\"></td>"+
+        "<td>"+startCell+"</td>"+
+        "<td>"+endCell+"</td>"+
+        "<td>"+ptsCell+"</td>"+
+        "<td style='text-align:center'>"+concCell+"</td>"+
+        "<td><input type='color' value='"+t.color+"' oninput=\"TEMPO._set("+i+",'color',this.value)\"></td>"+
+        "<td style='text-align:center'><input type='checkbox' title='Section' "+(t.section?"checked":"")+" onchange=\"TEMPO._set("+i+",'section',this.checked)\"></td>"+
+        "<td style='text-align:center'><input type='checkbox' title='Milestone' "+(t.milestone?"checked":"")+" onchange=\"TEMPO._set("+i+",'milestone',this.checked)\"></td>"+
+        "<td style='white-space:nowrap'><button class='tempo-btn mv' onclick='TEMPO.move("+i+",-1)' "+(i===0?"disabled":"")+">&#9650;</button>"+
+        "<button class='tempo-btn mv' onclick='TEMPO.move("+i+",1)' "+(i===S.tasks.length-1?"disabled":"")+">&#9660;</button>"+
+        "<button class='tempo-btn del' onclick='TEMPO.del("+i+")'>&#x2715;</button></td>";
+      body.appendChild(tr);
+    });
+    var scope = document.getElementById("tempo-scope"); if(scope) scope.textContent = totalScope()+" pts total scope";
+  }
+
+  function buildSprintTable(){
+    var body = document.getElementById("tempo-sprint-body"); if(!body) return;
+    body.innerHTML = "";
+    S.sprints.forEach(function(sp,i){
+      if (sp.quarter) {
+        var dv = document.createElement("tr"); dv.className = "q-divider";
+        dv.innerHTML = "<td colspan='6'>&#9670; "+attr(sp.quarter)+" begins at S"+sp.num+"</td>";
+        body.appendChild(dv);
+      }
+      var tr = document.createElement("tr");
+      tr.innerHTML =
+        "<td><input type='number' value='"+sp.num+"' oninput=\"TEMPO._setSprint("+i+",'num',this.value)\"></td>"+
+        "<td><input type='date' value='"+sp.start+"' oninput=\"TEMPO._setSprint("+i+",'start',this.value)\"></td>"+
+        "<td><input type='number' min='1' max='6' value='"+(sp.weeks||2)+"' oninput=\"TEMPO._setSprint("+i+",'weeks',this.value)\"></td>"+
+        "<td style='color:#889;font-size:11px'>ends "+iso(sprintEnd(sp))+"</td>"+
+        "<td><input type='text' placeholder='e.g. Q4' value='"+attr(sp.quarter||"")+"' style='width:70px' onchange=\"TEMPO._setSprint("+i+",'quarter',this.value)\"></td>"+
+        "<td><button class='tempo-btn del' onclick='TEMPO.delSprint("+i+")'>&#x2715;</button></td>";
+      body.appendChild(tr);
+    });
+  }
+
+  function refreshMeta(){
+    var t = document.getElementById("tempo-title"); if(t) t.textContent = S.name || "Schedule";
+    var sub = document.getElementById("tempo-sub");
+    if (sub) {
+      var extra = totalScope()+" pts · S"+ (S.sprints[0]?S.sprints[0].num:"?") +"–S"+ (S.sprints.length?S.sprints[S.sprints.length-1].num:"?") +" · "+(S.cap.devs||0)+" dev(s) @ "+(S.cap.ptsPerDev||0)+" pts/sprint";
+      sub.textContent = S.subtitle ? (S.subtitle+"  ·  "+extra) : extra;
+    }
+  }
+
+  function markChanged(){ if (typeof window.TEMPO_onChange === "function") window.TEMPO_onChange(); }
+
+  var api = {
+    STOCK_SPRINTS: STOCK_SPRINTS,
+    state: function(){ return S; },
+    setState: function(st){
+      S = Object.assign({ name:"", subtitle:"", cap:{ptsPerDev:7,devs:1}, sprints:[], tasks:[], interactive:true }, st||{});
+      if (!S.cap) S.cap = {ptsPerDev:7,devs:2};
+      if (!Array.isArray(S.sprints)) S.sprints = [];
+      if (!Array.isArray(S.tasks)) S.tasks = [];
+    },
+    // The View tab / exported chart (clean, read-only result).
+    viewHTML: function(opts){
+      opts = opts || {};
+      var dateLine = opts.exportedDate ? "<p class='tempo-exported'>Exported "+opts.exportedDate+"</p>" : "";
+      return "<div class='tempo-wrap'>"+
+        "<h1 class='tempo-title' id='tempo-title'></h1>"+
+        dateLine+
+        "<div class='tempo-card'>"+
+          "<div class='tempo-gantt' id='tempo-gantt'><canvas id='tempo-chart'></canvas></div>"+
+          "<div class='tempo-capwrap'><div class='tempo-caphead'>Sprint capacity — assigned / available points</div><canvas id='tempo-cap'></canvas></div>"+
+          "<div class='tempo-legend'>"+
+            "<span><i style='background:#22c55e'></i>within capacity</span>"+
+            "<span><i style='background:#dc2626'></i>over-allocated</span>"+
+            "<span><i style='background:#cbd5e1'></i>under 50%</span>"+
+            "<span><i style='background:#7c3aed;transform:rotate(45deg)'></i>milestone</span>"+
+          "</div>"+
+        "</div>"+
+        "<p class='tempo-sub' id='tempo-sub'></p>"+
+      "</div>";
+    },
+    // The Edit tab (app only — never exported).
+    editHTML: function(){
+      return "<div class='tempo-wrap'>"+
+        "<div class='tempo-panel'>"+
+          "<h2>Tasks &amp; Milestones <span style='font-weight:400;color:#889;font-size:11px'>— edits show live on the View tab</span></h2>"+
+          "<div class='tempo-cfg'>"+
+            "<label>Points / dev / sprint <input type='number' id='tempo-ptsdev' min='0' step='1'></label>"+
+            "<label>Developers <input type='number' id='tempo-devs' min='0' step='1'></label>"+
+            "<span class='scope-badge' id='tempo-scope'></span>"+
+          "</div>"+
+          "<table class='tempo-table'><thead><tr><th>Phase / Task</th><th>Start (date / sprint)</th><th>End</th><th>Pts</th><th>Conc.</th><th>Color</th><th>Sect.</th><th>Miles.</th><th></th></tr></thead><tbody id='tempo-task-body'></tbody></table>"+
+          "<div class='tempo-actions'>"+
+            "<button class='tempo-btn add' onclick='TEMPO.addTask()'>+ Add Task</button>"+
+            "<button class='tempo-btn mile' onclick='TEMPO.addMilestone()'>+ Add Milestone</button>"+
+            "<button class='tempo-btn sched' onclick='TEMPO.autoSchedule()'>&#9889; Auto-schedule from points</button>"+
+          "</div>"+
+        "</div>"+
+        "<div class='tempo-panel'>"+
+          "<h2>Sprint Calendar</h2>"+
+          "<table class='tempo-table'><thead><tr><th>Sprint #</th><th>Start</th><th>Weeks</th><th>End (auto)</th><th>Quarter</th><th></th></tr></thead><tbody id='tempo-sprint-body'></tbody></table>"+
+          "<div class='tempo-actions'>"+
+            "<button class='tempo-btn add' onclick='TEMPO.addSprint()'>+ Add Sprint</button>"+
+            "<button class='tempo-btn ghost' onclick='TEMPO.resetSprints()'>Reset to Stock calendar</button>"+
+          "</div>"+
+        "</div>"+
+      "</div>";
+    },
+    mount: function(){
+      refreshMeta();
+      var pdEl = document.getElementById("tempo-ptsdev"); if(pdEl){ pdEl.value = S.cap.ptsPerDev; pdEl.oninput=function(){ S.cap.ptsPerDev=+this.value; refreshMeta(); api.render(); markChanged(); }; }
+      var dvEl = document.getElementById("tempo-devs"); if(dvEl){ dvEl.value = S.cap.devs; dvEl.oninput=function(){ S.cap.devs=+this.value; refreshMeta(); api.render(); markChanged(); }; }
+      buildTaskTable(); buildSprintTable();
+      api.render();
+      if (!api._resizeBound){ window.addEventListener("resize", api.render); api._resizeBound = true; }
+    },
+    render: function(){ drawChart(); },
+    _set: function(i,k,v){
+      if(!S.tasks[i]) return; var t=S.tasks[i], rebuild=false;
+      if (k==="startSprint" || k==="start"){               // set start (from sprint or date) → refit end
+        var oldDur = Math.max(1, Math.round((pd(t.end)-pd(t.start))/86400000)+1);
+        t.start = v;
+        t.end = t.milestone ? v : (isBuffer(t) ? iso(addDays(pd(v),oldDur-1)) : iso(addWorkdays(pd(v),ptsToWorkDays(t.points))));
+        rebuild = true;
+      } else if (k==="milestoneDate"){ t.start=v; t.end=v; }
+      else if (k==="points"){ t.points=+v||0; t.end=iso(addWorkdays(pd(t.start),ptsToWorkDays(t.points))); rebuild=true; }
+      else if (k==="concurrent"){ t.concurrent=!!v; }
+      else if (k==="milestone"){
+        t.milestone=v;
+        if (v){ t.points=0; var pv=null; for(var p=i-1;p>=0;p--){ if(!S.tasks[p].section){ pv=S.tasks[p]; break; } }
+                var d=(pv&&pv.end)?pv.end:t.start; t.start=d; t.end=d; }
+        rebuild=true;
+      }
+      else if (k==="section"){ t.section=v; rebuild=true; }
+      else { t[k]=v; }
+      if (rebuild) buildTaskTable();
+      api.render(); refreshMeta();
+      var sc=document.getElementById("tempo-scope"); if(sc) sc.textContent=totalScope()+" pts total scope";
+      markChanged();
+    },
+    _setSprint: function(i,k,v){ if(!S.sprints[i]) return; S.sprints[i][k] = (k==="start"||k==="quarter")?v:(+v||0); buildSprintTable(); refreshMeta(); api.render(); markChanged(); },
+    addTask: function(){
+      // Chain after the last real task (sequential by default); else start at the first sprint.
+      var last=null; for(var j=S.tasks.length-1;j>=0;j--){ var x=S.tasks[j]; if(!x.section&&!x.milestone&&!isBuffer(x)){ last=x; break; } }
+      // Clear any previous unfilled slot so blanks never pile up.
+      S.tasks = S.tasks.filter(function(t){ return t.section||t.milestone||isBuffer(t)||(t.label&&t.label.trim()); });
+      last=null; for(var jj=S.tasks.length-1;jj>=0;jj--){ var y=S.tasks[jj]; if(!y.section&&!y.milestone&&!isBuffer(y)){ last=y; break; } }
+      var start = nextWorkday(last ? addDays(pd(last.end),1) : currentSprintStart()), pts=1;
+      S.tasks.push({label:"",start:iso(start),end:iso(addWorkdays(start,ptsToWorkDays(pts))),points:pts,color:"#6366f1",milestone:false,section:false,concurrent:false});
+      buildTaskTable(); api.render(); markChanged();
+      // Focus + select the new row's name so it's clear this is the row to type into.
+      var rows=document.querySelectorAll("#tempo-task-body tr");
+      if(rows.length){ var inp=rows[rows.length-1].querySelector("input[type=text]"); if(inp){ inp.focus(); inp.select(); } }
+    },
+    addMilestone: function(){
+      var pv=null; for(var p=S.tasks.length-1;p>=0;p--){ if(!S.tasks[p].section){ pv=S.tasks[p]; break; } }
+      var d = (pv&&pv.end) ? pv.end : iso(currentSprintStart());
+      S.tasks.push({label:"★ New Milestone",start:d,end:d,points:0,color:"#7c3aed",milestone:true,section:false});
+      buildTaskTable(); api.render(); markChanged();
+    },
+    del: function(i){ S.tasks.splice(i,1); buildTaskTable(); api.render(); markChanged(); },
+    // Drop unfilled (blank-name) task rows so they never linger on the chart, save, or export.
+    stripBlank: function(){ var n=S.tasks.length; S.tasks=S.tasks.filter(function(t){ return t.section||t.milestone||isBuffer(t)||(t.label&&t.label.trim()); }); if(S.tasks.length!==n){ buildTaskTable(); api.render(); } return S.tasks; },
+    move: function(i,dir){ var j=i+dir; if(j<0||j>=S.tasks.length) return; var tmp=S.tasks[i]; S.tasks[i]=S.tasks[j]; S.tasks[j]=tmp; buildTaskTable(); api.render(); markChanged(); },
+    addSprint: function(){ var last=S.sprints[S.sprints.length-1]; var num=last?last.num+1:277; var start=last?iso(addDays(sprintEnd(last),1)):iso(new Date()); S.sprints.push({num:num,start:start,weeks:2}); buildSprintTable(); api.render(); markChanged(); },
+    delSprint: function(i){ S.sprints.splice(i,1); buildSprintTable(); api.render(); markChanged(); },
+    resetSprints: function(){ S.sprints = JSON.parse(JSON.stringify(STOCK_SPRINTS)); buildSprintTable(); refreshMeta(); api.render(); markChanged(); },
+
+    // Recompute every task's start/end from its points, in list order.
+    // Duration(days) = points ÷ (pts/dev/sprint) × 2-week baseline. By default each
+    // task starts the day after everything before it ends (sequential). A task marked
+    // "Concurrent" instead starts at the same time as the previous task (parallel).
+    // Buffers (⏸) pause everything; milestones keep their dates; sections span children.
+    autoSchedule: function(){
+      if (!S.tasks.length) return;
+      var projStart = nextWorkday(currentSprintStart());   // schedule from the current sprint, not the past
+      var maxEnd = addDays(projStart, -1);   // so the first task starts on projStart
+      var prevStart = projStart, had = false;
+      S.tasks.forEach(function(t){
+        if (t.section || t.milestone) return;               // sections span later; milestones stay put
+        if (isBuffer(t)){                                   // moratorium: calendar pause (spans weekends)
+          var dur = 7, b0 = pd(t.start), b1 = pd(t.end);
+          if (t.start && t.end && b1 >= b0) dur = Math.round((b1-b0)/86400000) + 1;
+          var bStart = addDays(maxEnd, 1);
+          t.start = iso(bStart); t.end = iso(addDays(bStart, dur-1));
+          prevStart = bStart; if (pd(t.end) > maxEnd) maxEnd = pd(t.end); had = true;
+          return;
+        }
+        var dur = ptsToWorkDays(t.points);                  // work happens on weekdays only
+        var s0 = (t.concurrent && had) ? new Date(prevStart) : nextWorkday(addDays(maxEnd, 1));
+        t.start = iso(s0); t.end = iso(addWorkdays(s0, dur));
+        prevStart = s0; if (pd(t.end) > maxEnd) maxEnd = pd(t.end); had = true;
+      });
+      // Section rows span their group (until the next section row).
+      for (var i=0; i<S.tasks.length; i++){
+        if (!S.tasks[i].section) continue;
+        var mn=null, mx=null;
+        for (var k=i+1; k<S.tasks.length && !S.tasks[k].section; k++){
+          var cs=pd(S.tasks[k].start), ce=pd(S.tasks[k].end);
+          if (mn===null || cs<mn) mn=cs; if (mx===null || ce>mx) mx=ce;
+        }
+        if (mn){ S.tasks[i].start=iso(mn); S.tasks[i].end=iso(mx); }
+      }
+      buildTaskTable(); refreshMeta(); api.render(); markChanged();
+    }
+  };
+
+  // Auto-mount when a state was injected (i.e. in an exported file).
+  if (typeof window !== "undefined" && window.TEMPO_STATE) {
+    api.setState(window.TEMPO_STATE);
+    if (document.readyState !== "loading") api.mount();
+    else document.addEventListener("DOMContentLoaded", api.mount);
+  }
+  return api;
+})();
+</script>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     APP WIRING  (Electron only — never exported)
+     ══════════════════════════════════════════════════════════════════ -->
+<script>
+(function () {
+  var API = window.electronAPI;
+  var launch = document.getElementById("launch-screen");
+  var appView = document.getElementById("app-view");
+  var tabbar = document.getElementById("tabbar");
+  var titlebar = document.getElementById("titlebar");
+  var current = { file: null, archived: false };
+  var dirty = false;
+
+  function setDirty(v){ dirty = v; titlebar.classList.toggle("dirty", v); if(API) API.setDirty(v); }
+  window.TEMPO_onChange = function(){ setDirty(true); };
+
+  function slug(name){ return name.trim().toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,""); }
+
+  async function refreshList(){
+    var listEl = document.getElementById("launch-project-list");
+    var projects = API ? await API.listProjects() : [];
+    if (projects && projects.error){ listEl.innerHTML = "<div id='launch-empty'>Error: "+projects.error+"</div>"; return; }
+    if (!projects || !projects.length){ listEl.innerHTML = "<div id='launch-empty'>No schedules yet — create one below.</div>"; return; }
+    var active = projects.filter(function(p){return !p.archived;}), arch = projects.filter(function(p){return p.archived;});
+    listEl.innerHTML = "";
+    active.forEach(function(p){ listEl.appendChild(rowFor(p)); });
+    if (arch.length){ var lbl=document.createElement("div"); lbl.className="launch-section-label"; lbl.textContent="Archived"; listEl.appendChild(lbl); arch.forEach(function(p){ listEl.appendChild(rowFor(p)); }); }
+  }
+
+  function rowFor(p){
+    var row = document.createElement("div");
+    row.className = "project-item" + (p.archived ? " archived-item" : "");
+    row.innerHTML = "<span class='project-icon'>&#9776;</span><span class='p-label'>"+p.label+"</span>";
+    var open = document.createElement("button"); open.className="row-btn open-btn"; open.textContent="Open";
+    open.onclick = function(e){ e.stopPropagation(); openProject(p.file, p.archived); };
+    var arch = document.createElement("button"); arch.className="row-btn archive-btn"; arch.textContent = p.archived ? "Restore" : "Archive";
+    arch.onclick = async function(e){ e.stopPropagation(); if(p.archived) await API.unarchiveProject(p.file); else await API.archiveProject(p.file); refreshList(); };
+    row.onclick = function(){ openProject(p.file, p.archived); };
+    row.appendChild(open); row.appendChild(arch);
+    return row;
+  }
+
+  function switchTab(name){
+    Array.prototype.forEach.call(document.querySelectorAll(".tab-btn"), function(b){ b.classList.toggle("active", b.getAttribute("data-tab")===name); });
+    if (name==="view") TEMPO.stripBlank();   // drop unfilled rows before showing/exporting the chart
+    document.getElementById("tab-view").classList.toggle("tab-hidden", name!=="view");
+    document.getElementById("tab-edit").classList.toggle("tab-hidden", name!=="edit");
+    if (name==="view") TEMPO.render();
+  }
+
+  function loadIntoApp(data, startTab){
+    startTab = startTab || "view";
+    data.interactive = true;
+    TEMPO.setState(data);
+    appView.innerHTML =
+      "<div id='tab-view' class='tab-pane'>"+ TEMPO.viewHTML({}) +"</div>"+
+      "<div id='tab-edit' class='tab-pane tab-hidden'>"+ TEMPO.editHTML() +"</div>";
+    TEMPO.mount();
+    document.getElementById("proj-title").textContent = data.name || "Schedule";
+    launch.classList.add("hidden");
+    appView.classList.remove("hidden");
+    tabbar.classList.remove("hidden");
+    switchTab(startTab);
+    setDirty(false);
+    // Resize the window to fit whichever tab we opened on, clamped to the screen.
+    requestAnimationFrame(function(){
+      var pane = document.getElementById(startTab === "edit" ? "tab-edit" : "tab-view");
+      var chart = document.getElementById("tempo-chart");
+      var needH = titlebar.offsetHeight + tabbar.offsetHeight + pane.scrollHeight + 20 + 30;
+      var needW = Math.round((chart ? chart.offsetWidth : 1240) + 26*2 + 34);
+      if (API && API.resizeToFit) API.resizeToFit(needW, needH);
+    });
+  }
+
+  async function openProject(file, archived){
+    current = { file: file, archived: archived };
+    var data = await API.loadProject(file, archived);
+    if (!data){ alert("Could not load "+file); return; }
+    if (archived){ await API.unarchiveProject(file); current.archived = false; }
+    loadIntoApp(data);
+  }
+
+  function collectState(){
+    TEMPO.stripBlank();          // never save/export unfilled rows
+    var s = TEMPO.state();
+    return { name: s.name, subtitle: s.subtitle||"", cap: s.cap, sprints: s.sprints, tasks: s.tasks };
+  }
+
+  async function save(){
+    if (!current.file){ current.file = slug(TEMPO.state().name || "schedule") + ".json"; }
+    var ok = await API.saveProject(current.file, collectState());
+    if (ok) setDirty(false); else alert("Save failed.");
+    return ok;
+  }
+
+  // ── Launch controls ──
+  document.getElementById("launch-create-btn").onclick = function(){
+    var name = document.getElementById("launch-new-input").value.trim();
+    if (!name) return;
+    current = { file: slug(name)+".json", archived: false };
+    var defaultSprints = JSON.parse(JSON.stringify(TEMPO.STOCK_SPRINTS)).filter(function(sp){ return sp.num>=277 && sp.num<=288; });
+    loadIntoApp({ name: name, subtitle:"", cap:{ptsPerDev:7,devs:1}, sprints: defaultSprints, tasks: [] }, "edit");
+    setDirty(true);
+  };
+  document.getElementById("launch-new-input").addEventListener("keydown", function(e){ if(e.key==="Enter") document.getElementById("launch-create-btn").click(); });
+  document.getElementById("launch-browse-btn").onclick = async function(){
+    var data = API ? await API.openFileDialog() : null;
+    if (data){ current = { file: null, archived: false }; loadIntoApp(data); }
+  };
+
+  // ── Titlebar controls ──
+  document.getElementById("btn-save").onclick = save;
+  document.getElementById("btn-home").onclick = async function(){
+    if (dirty && !confirm("Discard unsaved changes and return to Home?")) return;
+    appView.classList.add("hidden"); tabbar.classList.add("hidden"); launch.classList.remove("hidden"); setDirty(false); refreshList();
+  };
+
+  // ── Tabs ──
+  Array.prototype.forEach.call(document.querySelectorAll(".tab-btn"), function(b){
+    b.onclick = function(){ switchTab(b.getAttribute("data-tab")); };
+  });
+
+  // ── Export (View tab → self-contained HTML, dated) ──
+  document.getElementById("btn-export").onclick = doExport;
+
+  // Build a self-contained HTML *fragment* for a Confluence "HTML" macro:
+  // no <!DOCTYPE>/<html>/<head>/<body>, and a scoped .tempo-page wrapper so it
+  // never restyles the host page. Matches the structure of the working CE macro.
+  function buildExportHTML(){
+    var styleText  = document.getElementById("tempo-style").textContent;
+    var engineText = document.getElementById("tempo-engine").textContent;
+    var st = collectState(); st.interactive = false;
+    var dateStr = new Date().toLocaleDateString("en-GB", { day:"numeric", month:"long", year:"numeric" });
+    var view = TEMPO.viewHTML({ exportedDate: dateStr });
+    return "<style>\n"+
+      ".tempo-page{background:#f5f6fa;padding:24px 20px 40px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;}\n"+
+      styleText +"</style>\n"+
+      "<div class='tempo-page'>"+ view +"</div>\n"+
+      "<script>window.TEMPO_STATE="+ JSON.stringify(st) +";<\/script>\n"+
+      "<script>"+ engineText +"<\/script>";
+  }
+
+  async function doExport(){
+    var html = buildExportHTML();
+    var fname = slug(TEMPO.state().name || "tempo") + "-wiki.txt";
+    if (API){ var ok = await API.exportHtml(html, fname); if (ok) flash("Exported for Wiki (.txt)"); }
+    else { window.__lastExport = html; console.log(html); }
+  }
+
+  function flash(msg){
+    var d = document.getElementById("proj-title"); var old = d.textContent;
+    d.textContent = "✓ "+msg; setTimeout(function(){ d.textContent = old; }, 1600);
+  }
+
+  if (API && API.onSaveAndQuit) API.onSaveAndQuit(async function(){ await save(); API.saveComplete(); });
+
+  refreshList();
+})();
+</script>
+</body>
+</html>
