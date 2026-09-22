@@ -166,7 +166,7 @@
   <span id="proj-title">Tempo</span>
   <span class="dirty-dot">●</span>
   <span class="tb-spacer"></span>
-  <button id="btn-export">Export for Wiki</button>
+  <button id="btn-export">Copy Code</button>
   <button id="btn-save" class="primary">Save</button>
   <button id="btn-home">Home</button>
 </div>
@@ -769,8 +769,7 @@ var TEMPO = (function () {
 
   async function doExport(){
     var html = buildExportHTML();
-    var fname = slug(TEMPO.state().name || "tempo") + "-wiki.txt";
-    if (API){ var ok = await API.exportHtml(html, fname); if (ok) flash("Exported for Wiki (.txt)"); }
+    if (API){ var ok = await API.copyToClipboard(html); if (ok) flash("✓ Copied to clipboard"); }
     else { window.__lastExport = html; console.log(html); }
   }
 

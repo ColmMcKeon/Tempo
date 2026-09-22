@@ -5,7 +5,7 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "build": "electron-packager . Tempo --platform=darwin --overwrite --icon=icon.icns --asar && node scripts/clean-privacy-keys.js Tempo-darwin-arm64/Tempo.app && rm -rf ../Tempo.app && cp -R Tempo-darwin-arm64/Tempo.app ../Tempo.app && xattr -cr ../Tempo.app && echo 'App updated'",
+    "build": "electron-packager . Tempo --platform=darwin --overwrite --icon=icon.icns --asar && node scripts/clean-privacy-keys.js Tempo-darwin-arm64/Tempo.app && rm -rf ../Tempo.app && cp -R Tempo-darwin-arm64/Tempo.app ../Tempo.app && codesign --force --deep -s - ../Tempo.app 2>/dev/null && xattr -d com.apple.quarantine ../Tempo.app 2>/dev/null; echo 'App updated'",
     "push": "cd .. && git add app/main.js app/preload.js app/package.json app/tempo.html && git commit -m 'Update source' && git push && echo 'Pushed to GitHub'"
   },
   "devDependencies": {

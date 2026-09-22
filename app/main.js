@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, screen } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, screen, clipboard } = require('electron');
 const path = require('path');
 const fs   = require('fs');
 
@@ -160,4 +160,13 @@ ipcMain.handle('export-html', async (e, html, filename) => {
   if (canceled || !filePath) return null;
   try { fs.writeFileSync(filePath, html, 'utf8'); return true; }
   catch(err) { return false; }
+});
+
+ipcMain.handle('copy-to-clipboard', (e, html) => {
+  try {
+    clipboard.writeText(html);
+    return true;
+  } catch(err) {
+    return false;
+  }
 });

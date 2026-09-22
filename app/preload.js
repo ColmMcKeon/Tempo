@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   openFileDialog:   ()                => ipcRenderer.invoke('open-file-dialog'),
   getDataDir:       ()                => ipcRenderer.invoke('get-data-dir'),
   exportHtml:       (html, filename)  => ipcRenderer.invoke('export-html', html, filename),
+  copyToClipboard:  (html)            => ipcRenderer.invoke('copy-to-clipboard', html),
   resizeToFit:      (w, h)            => ipcRenderer.invoke('resize-to-fit', w, h),
   setDirty:         (dirty)           => ipcRenderer.send('set-dirty', dirty),
   saveComplete:     ()                => ipcRenderer.send('save-complete'),
