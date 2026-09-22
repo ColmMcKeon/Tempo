@@ -2,6 +2,14 @@
 
 A sprint-based Gantt scheduler for Stock & Connected Enterprise planning — a desktop app for visualizing and managing project timelines, built with Electron.
 
+## Tech Stack
+
+- **Framework:** Electron
+- **Language:** JavaScript/HTML/CSS
+- **Data:** JSON (project files)
+- **Build:** electron-packager
+- **Platform:** macOS (Apple Silicon)
+
 ## Features
 
 - **Sprint-based planning** — Organize work by 2-week and 3-week sprints
